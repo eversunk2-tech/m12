@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>태양 고도와 태양 에너지 양 알아보기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F9FF; --surface:#FFFFFF; --ink:#14304D; --muted:#4F6A85; --line:#D3E3F3;
+  --primary:#1F6FEB; --on-primary:#FFFFFF; --primary-soft:#E3EFFF;
+  --sun:#FFB800; --sun-deep:#E38F00; --heat:#FF5C10;
+  --ok:#0B7A57; --ok-soft:#DDF4EA; --bad:#B4471B; --bad-soft:#FFEBDD; --note:#FFF3D0;
+  --sky:#E2F0FF; --sky-night:#C7D3E6; --ground:#CBDFF2; --paper:#1B2433; --dash:#8CAED6;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1929; --surface:#14273F; --ink:#EAF2FC; --muted:#9FB6D0; --line:#2B4463;
+    --primary:#5AA2FF; --on-primary:#08162A; --primary-soft:#1A3A66;
+    --sun:#FFC83A; --sun-deep:#F5A300; --heat:#FF7A3A;
+    --ok:#5FD9AC; --ok-soft:#123B31; --bad:#FFB08A; --bad-soft:#4A2A1A; --note:#3A3113;
+    --sky:#17324F; --sky-night:#0A1524; --ground:#21446B; --paper:#05080E; --dash:#4F76A3;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1929; --surface:#14273F; --ink:#EAF2FC; --muted:#9FB6D0; --line:#2B4463;
+  --primary:#5AA2FF; --on-primary:#08162A; --primary-soft:#1A3A66;
+  --sun:#FFC83A; --sun-deep:#F5A300; --heat:#FF7A3A;
+  --ok:#5FD9AC; --ok-soft:#123B31; --bad:#FFB08A; --bad-soft:#4A2A1A; --note:#3A3113;
+  --sky:#17324F; --sky-night:#0A1524; --ground:#21446B; --paper:#05080E; --dash:#4F76A3;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{background:var(--bg);scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font-family:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic','Nanum Gothic',sans-serif;
+  font-size:17px;line-height:1.65;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+h1,h2,h3,.jua{font-family:'Jua','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-weight:400;margin:0}
+h1{font-size:clamp(26px,4.4vw,38px);line-height:1.2}
+h2{font-size:clamp(23px,3.4vw,29px);line-height:1.3;margin-bottom:8px}
+h3{font-size:20px;line-height:1.35;margin-bottom:6px}
+p{margin:0 0 12px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px 56px}
+.muted{color:var(--muted)}
+button{font:inherit}
+:focus-visible{outline:3px solid var(--sun-deep);outline-offset:2px}
+
+/* header */
+.top{padding-top:26px}
+.brand{display:flex;gap:16px;align-items:center}
+.brand svg{flex:none;width:52px;height:52px}
+.brand p{margin:4px 0 0;color:var(--muted);font-size:16px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:22px}
+.steps button{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;
+  border:2px solid var(--line);background:var(--surface);color:var(--muted);font-weight:700;cursor:pointer;text-align:left;min-height:52px}
+.steps .n{font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;width:30px;height:30px;border-radius:50%;
+  background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;flex:none;font-size:17px}
+.steps button[aria-current="step"]{border-color:var(--primary);background:var(--primary-soft);color:var(--ink)}
+.steps button[aria-current="step"] .n{background:var(--primary);color:var(--on-primary)}
+@media (max-width:640px){
+  .steps{gap:6px}
+  .steps button{flex-direction:column;gap:4px;text-align:center;padding:8px 2px;font-size:14px;line-height:1.3}
+}
+
+/* generic */
+.panel{padding-top:30px}
+.lead{max-width:62ch}
+.btn{border-radius:12px;padding:10px 20px;border:2px solid var(--line);background:var(--surface);color:var(--ink);
+  font-weight:700;cursor:pointer;min-height:48px}
+.btn:hover{border-color:var(--primary)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.small{min-height:40px;padding:6px 14px;font-size:15px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:start}
+@media (max-width:820px){.two{grid-template-columns:1fr}}
+textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:12px 14px;resize:vertical;line-height:1.6}
+textarea:focus{border-color:var(--primary)}
+label.lbl{display:block;font-weight:700;margin:16px 0 6px}
+fieldset{border:0;padding:0;margin:0;min-width:0}
+legend{font-family:'Jua','Noto Sans KR',sans-serif;font-size:21px;line-height:1.45;padding:0;margin-bottom:6px}
+.figure{background:var(--surface);border:2px solid var(--line);border-radius:20px;overflow:hidden}
+.figure svg{display:block;width:100%;height:auto}
+.figure figcaption,.cap{font-size:15px;color:var(--muted);padding:10px 16px}
+figure{margin:0}
+
+/* choices */
+.choices{display:grid;gap:10px;margin:14px 0}
+.choice{display:flex;align-items:center;gap:12px;padding:14px 16px;border:2px solid var(--line);border-radius:14px;
+  background:var(--surface);cursor:pointer;font-weight:500}
+.choice input{accent-color:var(--primary);width:22px;height:22px;margin:0;flex:none}
+.choice.on{border-color:var(--primary);background:var(--primary-soft);font-weight:700}
+.choice:focus-within{outline:3px solid var(--sun-deep);outline-offset:2px}
+
+/* lab */
+.seg{display:inline-flex;border:2px solid var(--line);border-radius:14px;background:var(--surface);padding:4px;gap:4px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--muted);font-weight:700;padding:8px 16px;border-radius:10px;cursor:pointer;min-height:44px}
+.seg button[aria-pressed="true"]{background:var(--primary);color:var(--on-primary)}
+.mission{background:var(--note);border-radius:14px;padding:12px 16px;margin:16px 0 18px;font-size:16px}
+.mission b{font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;font-size:18px;margin-right:6px}
+.lab{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+@media (max-width:900px){.lab{grid-template-columns:1fr}}
+.stage{background:var(--surface);border:2px solid var(--line);border-radius:22px;overflow:hidden}
+.stage svg#stageSvg{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
+#sunG{touch-action:none}
+#sunG.can{cursor:grab}
+#sunG.can.grab{cursor:grabbing}
+#sunG:focus-visible{outline:3px solid var(--primary);outline-offset:6px}
+.ray{stroke:#F5A300;stroke-width:1.6;stroke-dasharray:6 6}
+.hit{fill:#fff;stroke:#B45309;stroke-width:1.5}
+.stage .cap{border-top:2px solid var(--line);margin:0;padding:10px 18px}
+.controls{padding:16px 18px 18px;border-top:2px solid var(--line)}
+.row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.row label{font-weight:700;min-width:120px}
+.row output{font-family:'Jua','Noto Sans KR',sans-serif;font-size:22px;color:var(--primary);margin-left:6px}
+input[type=range]{flex:1 1 220px;min-width:0;height:40px;accent-color:var(--primary);cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
+.chip{border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;font-weight:700;cursor:pointer;min-height:40px}
+.chip[aria-pressed="true"]{background:var(--primary-soft);border-color:var(--primary)}
+.ctl-note{font-size:15px;color:var(--muted);margin:10px 0 0}
+.rec-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px;padding-top:16px;border-top:2px solid var(--line)}
+.rec-row .count{color:var(--muted);font-weight:700}
+
+.readout{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:4px 18px}
+.r-item{padding:12px 0;border-bottom:2px solid var(--line)}
+.r-item:last-child{border-bottom:0}
+.r-item span.t{display:block;font-weight:700;color:var(--muted);font-size:15px}
+.r-item strong{display:block;font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;font-size:34px;line-height:1.25}
+.r-item small{display:block;color:var(--muted);font-size:14px;line-height:1.45}
+.bar{height:12px;border-radius:8px;background:var(--primary-soft);overflow:hidden;margin:4px 0 6px}
+.bar i{display:block;height:100%;width:0;background:var(--heat);border-radius:8px}
+.duo{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:center}
+.duo svg{display:block;width:100%;height:auto}
+.temp-val{font-family:'Jua','Noto Sans KR',sans-serif;font-size:34px;line-height:1.2;color:var(--heat)}
+.top-view{border-radius:10px;overflow:hidden;border:2px solid var(--line);margin-top:8px}
+.top-view svg{display:block;width:100%;height:auto}
+@media (max-width:900px) and (min-width:560px){
+  .readout{display:grid;grid-template-columns:1fr 1fr;column-gap:24px}
+  .readout .r-item:nth-child(3){grid-column:1 / -1}
+}
+
+/* records */
+.tbl-wrap{overflow-x:auto;border:2px solid var(--line);border-radius:16px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:580px;font-size:16px}
+th,td{padding:10px 12px;text-align:left;border-bottom:2px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-size:14px}
+tr:last-child td{border-bottom:0}
+td.num{font-family:'Jua','Noto Sans KR',sans-serif;font-size:18px}
+.del{border:0;background:transparent;color:var(--muted);cursor:pointer;font-weight:700;padding:6px 10px;border-radius:8px;min-height:36px}
+.del:hover{background:var(--bad-soft);color:var(--bad)}
+.chart-box{background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:12px 12px 4px;margin-top:20px}
+.chart-box svg{display:block;width:100%;height:auto}
+.ct{font-size:13px;fill:var(--muted)}
+.cv{font-size:13px;fill:var(--ink);font-weight:700}
+.cl{font-size:14px;fill:var(--ink);font-weight:700}
+.empty{border:2px dashed var(--line);border-radius:16px;padding:24px;text-align:center;color:var(--muted);background:var(--surface)}
+.check{margin:0 0 18px}
+.check .q{font-weight:700;margin-bottom:8px}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opt{border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:8px 16px;font-weight:700;cursor:pointer;min-height:44px}
+.opt.right{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.opt.wrong{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.fb{margin:8px 0 0;font-size:16px}
+.fb.good{color:var(--ok)}
+.fb.bad{color:var(--bad)}
+
+/* summary */
+.sec{margin-top:34px}
+.figs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:12px 0}
+@media (max-width:700px){.figs{grid-template-columns:1fr}}
+details{background:var(--surface);border:2px solid var(--line);border-radius:14px;margin:0 0 10px;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:700;list-style:none;min-height:48px;display:flex;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";font-family:'Jua','Noto Sans KR',sans-serif;color:var(--primary);width:22px;font-size:22px;flex:none}
+details[open] summary::before{content:"−"}
+details .body{padding:0 16px 14px 38px;color:var(--ink)}
+.compare{background:var(--primary-soft);border-radius:16px;padding:16px 18px}
+.compare p:last-child{margin-bottom:0}
+.model li{margin-bottom:6px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));
+  background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;font-size:16px;
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;max-width:calc(100vw - 32px);text-align:center}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 52 52" aria-hidden="true">
+      <g stroke="var(--sun-deep)" stroke-width="3.5" stroke-linecap="round">
+        <line x1="26" y1="3" x2="26" y2="9"/><line x1="26" y1="43" x2="26" y2="49"/>
+        <line x1="3" y1="26" x2="9" y2="26"/><line x1="43" y1="26" x2="49" y2="26"/>
+        <line x1="9.7" y1="9.7" x2="14" y2="14"/><line x1="38" y1="38" x2="42.3" y2="42.3"/>
+        <line x1="9.7" y1="42.3" x2="14" y2="38"/><line x1="38" y1="14" x2="42.3" y2="9.7"/>
+      </g>
+      <circle cx="26" cy="26" r="12" fill="var(--sun)" stroke="var(--sun-deep)" stroke-width="3"/>
+    </svg>
+    <div>
+      <h1>태양 고도와 태양 에너지 양</h1>
+      <p>수업 시간에 한 실험을 화면 속에서 더 탐구해 봐요.</p>
+    </div>
+  </div>
+  <nav class="steps" aria-label="탐구 단계">
+    <button type="button" data-step="1"><span class="n">1</span>예상하기</button>
+    <button type="button" data-step="2"><span class="n">2</span>실험하기</button>
+    <button type="button" data-step="3"><span class="n">3</span>기록·분석</button>
+    <button type="button" data-step="4"><span class="n">4</span>정리하기</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- 1단계 -->
+<section class="panel" id="p1" data-p="1">
+  <div class="two">
+    <div>
+      <h2>먼저 예상해 봐요</h2>
+      <p class="lead">태양 고도는 태양이 지평선에서 얼마나 높이 떠 있는지를 나타내는 각도예요. 아침과 저녁에는 낮고, 낮 12시쯤에는 가장 높아요.</p>
+      <figure class="figure">
+        <svg viewBox="0 0 360 200" role="img" aria-label="지평선과 태양 방향 사이의 각이 태양 고도임을 보여 주는 그림">
+          <rect width="360" height="200" fill="var(--sky)"/>
+          <rect y="160" width="360" height="40" fill="var(--ground)"/>
+          <line x1="0" y1="160" x2="360" y2="160" stroke="var(--ink)" stroke-width="2"/>
+          <rect x="95" y="160" width="50" height="8" rx="2" fill="var(--paper)"/>
+          <line x1="120" y1="160" x2="219.6" y2="76.4" stroke="var(--ink)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M170 160 A50 50 0 0 0 158.3 127.9" fill="none" stroke="var(--heat)" stroke-width="4" stroke-linecap="round"/>
+          <text x="200" y="146" font-family="Jua,'Noto Sans KR',sans-serif" font-size="19" fill="var(--heat)" stroke="var(--sky)" stroke-width="4" paint-order="stroke">태양 고도</text>
+          <text x="14" y="186" font-size="14" fill="var(--muted)">지평선</text>
+          <g transform="translate(219.6 76.4)">
+            <g stroke="var(--sun-deep)" stroke-width="3" stroke-linecap="round">
+              <line x1="0" y1="-23" x2="0" y2="-30"/><line x1="0" y1="23" x2="0" y2="30"/>
+              <line x1="-23" y1="0" x2="-30" y2="0"/><line x1="23" y1="0" x2="30" y2="0"/>
+              <line x1="-16" y1="-16" x2="-21" y2="-21"/><line x1="16" y1="16" x2="21" y2="21"/>
+              <line x1="-16" y1="16" x2="-21" y2="21"/><line x1="16" y1="-16" x2="21" y2="-21"/>
+            </g>
+            <circle r="17" fill="var(--sun)" stroke="var(--sun-deep)" stroke-width="3"/>
+          </g>
+        </svg>
+        <figcaption>지평선과 태양 방향 사이의 각이 태양 고도예요.</figcaption>
+      </figure>
+    </div>
+    <div>
+      <fieldset>
+        <legend>태양 고도가 높아지면, 같은 넓이의 땅이 받는 태양 에너지 양은 어떻게 될까요?</legend>
+        <div class="choices" id="predChoices">
+          <label class="choice"><input type="radio" name="pred" value="more">더 많아질 것 같아요</label>
+          <label class="choice"><input type="radio" name="pred" value="less">더 적어질 것 같아요</label>
+          <label class="choice"><input type="radio" name="pred" value="same">달라지지 않을 것 같아요</label>
+        </div>
+      </fieldset>
+      <label class="lbl" for="reason">그렇게 생각한 까닭을 적어 보세요. 안 써도 괜찮아요.</label>
+      <textarea id="reason" rows="3" maxlength="200" placeholder="예: 손전등을 똑바로 비출 때가 더 밝았어요."></textarea>
+      <div class="actions">
+        <button type="button" class="btn primary" data-goto="2">실험하러 가기</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2단계 -->
+<section class="panel" id="p2" data-p="2" hidden>
+  <h2>고도를 바꿔 가며 실험해요</h2>
+  <p class="lead">수업 시간에 손전등으로 했던 실험과 같은 원리예요. 햇빛이 검은 종이를 10분 동안 비춘다고 생각하고 결과를 살펴보세요.</p>
+  <div class="seg" role="group" aria-label="조절 방법">
+    <button type="button" id="modeDirect" aria-pressed="true">고도 직접 바꾸기</button>
+    <button type="button" id="modeDate" aria-pressed="false">날짜와 시각으로 바꾸기</button>
+  </div>
+  <div class="mission" id="mission"></div>
+
+  <div class="lab">
+    <div class="stage">
+      <svg id="stageSvg" viewBox="0 0 760 440" role="img" aria-label="태양, 햇빛줄기, 검은 종이를 옆에서 본 모습"></svg>
+      <p class="cap" id="stageCap"></p>
+      <div class="controls">
+        <div id="ctlDirect">
+          <div class="row">
+            <label for="altRange">태양 고도<output id="altOut" for="altRange"></output></label>
+            <input type="range" id="altRange" min="10" max="90" step="1" value="45" aria-describedby="stageCap">
+          </div>
+          <div class="chips" role="group" aria-label="자주 쓰는 고도">
+            <button type="button" class="chip" data-alt="15">15°</button>
+            <button type="button" class="chip" data-alt="30">30°</button>
+            <button type="button" class="chip" data-alt="45">45°</button>
+            <button type="button" class="chip" data-alt="60">60°</button>
+            <button type="button" class="chip" data-alt="75">75°</button>
+            <button type="button" class="chip" data-alt="90">90°</button>
+          </div>
+          <p class="ctl-note">그림 속 태양을 끌어서 움직여도 돼요.</p>
+        </div>
+        <div id="ctlDate" hidden>
+          <div class="row">
+            <label for="dateRange">날짜<output id="dateOut" for="dateRange"></output></label>
+            <input type="range" id="dateRange" min="1" max="365" step="1" value="172">
+          </div>
+          <div class="chips" role="group" aria-label="계절 고르기">
+            <button type="button" class="chip" data-day="80">봄 3월 21일</button>
+            <button type="button" class="chip" data-day="172">여름 6월 21일</button>
+            <button type="button" class="chip" data-day="266">가을 9월 23일</button>
+            <button type="button" class="chip" data-day="356">겨울 12월 22일</button>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <label for="timeRange">시각<output id="timeOut" for="timeRange"></output></label>
+            <input type="range" id="timeRange" min="360" max="1080" step="10" value="720">
+            <button type="button" class="btn small" id="noonBtn">낮 12시로</button>
+          </div>
+          <p class="ctl-note">우리나라 중부(위도 약 37°)에서 남쪽 하늘을 바라본 모습이에요. 오전에는 태양이 왼쪽(동쪽), 오후에는 오른쪽(서쪽)에 있어요. 시각은 태양이 정남쪽에 오는 때를 12시로 한 태양시예요.</p>
+        </div>
+        <div class="rec-row">
+          <button type="button" class="btn primary" id="recordBtn">이 조건 기록하기</button>
+          <span class="count" id="recCount">기록 0개</span>
+          <button type="button" class="btn" data-goto="3">기록 보러 가기</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="readout" aria-label="측정 결과">
+      <div class="r-item">
+        <span class="t">태양 고도</span>
+        <strong id="rAlt">45°</strong>
+      </div>
+      <div class="r-item">
+        <span class="t">빛이 닿은 넓이</span>
+        <strong id="rCells">5.7칸</strong>
+        <small>고도 90°일 때는 4칸이에요.</small>
+      </div>
+      <div class="r-item">
+        <span class="t">1칸에 오는 태양 에너지</span>
+        <strong id="rEnergy">71%</strong>
+        <div class="bar" aria-hidden="true"><i id="rBar"></i></div>
+        <small>태양이 머리 위(90°)에 있을 때를 100%로 해요.</small>
+      </div>
+      <div class="r-item">
+        <div class="duo">
+          <svg id="thermSvg" viewBox="0 0 96 210" role="img" aria-label="검은 종이 온도계">
+            <rect x="34" y="12" width="22" height="172" rx="11" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
+            <circle cx="45" cy="190" r="20" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
+            <rect x="35.3" y="13.3" width="19.4" height="176" rx="9.7" fill="var(--surface)"/>
+            <circle cx="45" cy="190" r="18.7" fill="var(--surface)"/>
+            <rect id="mercury" x="40" y="100" width="10" height="90" rx="5" fill="var(--heat)"/>
+            <circle cx="45" cy="190" r="13.5" fill="var(--heat)"/>
+            <g id="thermTicks" stroke="var(--muted)" stroke-width="1.5"></g>
+          </svg>
+          <div>
+            <span class="t" style="display:block;font-weight:700;color:var(--muted);font-size:15px">검은 종이 온도</span>
+            <div class="temp-val" id="rTemp">30.6°C</div>
+            <small style="display:block;color:var(--muted);font-size:14px;line-height:1.45">10분 동안 햇빛을 받은 뒤의 모형값이에요. 주변 공기는 20°C로 같아요.</small>
+          </div>
+        </div>
+      </div>
+      <div class="r-item">
+        <span class="t">위에서 본 모습</span>
+        <div class="top-view">
+          <svg id="topSvg" viewBox="0 0 220 132" role="img" aria-label="검은 종이 위에서 빛이 닿은 자리를 위에서 본 모습">
+            <rect width="220" height="132" fill="var(--paper)"/>
+            <rect id="lit" x="88" y="44" width="44" height="44" fill="#FF9A3C"/>
+            <g id="topGrid" stroke="#fff" stroke-opacity=".38" stroke-width="1"></g>
+          </svg>
+        </div>
+        <small style="margin-top:6px">밝고 진할수록 한 칸이 받는 에너지가 많아요.</small>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- 3단계 -->
+<section class="panel" id="p3" data-p="3" hidden>
+  <h2>기록을 살펴봐요</h2>
+  <p class="lead">고도가 달라질 때 넓이, 에너지, 온도가 어떻게 바뀌는지 표와 그래프로 찾아보세요. 페이지를 새로고침하면 기록이 지워져요.</p>
+  <div id="recEmpty" class="empty">
+    <p>아직 기록이 없어요. 2단계에서 “이 조건 기록하기”를 눌러 보세요.</p>
+    <button type="button" class="btn primary" data-goto="2">실험하러 가기</button>
+  </div>
+  <div id="recWrap" hidden>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>조건</th><th>태양 고도</th><th>빛이 닿은 넓이</th><th>1칸 에너지</th><th>종이 온도</th><th><span class="sr-only" style="position:absolute;left:-9999px">지우기</span></th></tr></thead>
+        <tbody id="recBody"></tbody>
+      </table>
+    </div>
+    <div class="actions" style="margin-top:10px">
+      <button type="button" class="btn small" id="clearRec">기록 모두 지우기</button>
+    </div>
+    <div class="chart-box">
+      <div class="seg" role="group" aria-label="그래프 종류" style="margin:0 0 6px 6px">
+        <button type="button" data-cy="temp" aria-pressed="true">종이 온도</button>
+        <button type="button" data-cy="energy" aria-pressed="false">1칸 에너지</button>
+      </div>
+      <svg id="chartSvg" viewBox="0 0 560 320" role="img" aria-label="태양 고도에 따른 기록 그래프"></svg>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h3>표와 그래프를 보고 골라 보세요</h3>
+    <div id="checks"></div>
+  </div>
+  <div class="actions">
+    <button type="button" class="btn primary" data-goto="4">정리하러 가기</button>
+  </div>
+</section>
+
+<!-- 4단계 -->
+<section class="panel" id="p4" data-p="4" hidden>
+  <h2>정리해 봐요</h2>
+
+  <div class="compare" id="compare"></div>
+
+  <div class="sec">
+    <h3>왜 그럴까요?</h3>
+    <p class="lead">햇빛의 양은 같아도 고도가 낮으면 더 넓은 땅에 퍼져요. 그러면 한 칸이 받는 에너지가 줄어들어서 땅이 덜 데워져요.</p>
+    <div class="figs" id="figs"></div>
+  </div>
+
+  <div class="sec">
+    <h3>더 생각해 보기</h3>
+    <details>
+      <summary>여름이 겨울보다 더운 까닭은 무엇일까요?</summary>
+      <div class="body">여름에는 낮에 태양 고도가 높아서 같은 넓이의 땅이 받는 에너지가 많아요. 게다가 낮의 길이도 길어서 땅이 햇빛을 받는 시간이 길어요.</div>
+    </details>
+    <details>
+      <summary>기온은 왜 태양 고도가 가장 높은 때보다 조금 늦게 가장 높아질까요?</summary>
+      <div class="body">땅이 햇빛으로 먼저 데워지고, 그 열이 공기를 데워 주기 때문이에요. 시간이 걸려서 기온은 낮 12시 무렵이 아니라 오후 2시쯤 가장 높아요.</div>
+    </details>
+    <details>
+      <summary>아침과 저녁에는 햇빛이 왜 약하게 느껴질까요?</summary>
+      <div class="body">고도가 낮으면 같은 빛이 넓게 퍼지는 데다, 햇빛이 공기를 더 길게 지나와서 더 많이 약해져요. 이 시뮬레이션에는 공기의 영향을 넣지 않았어요.</div>
+    </details>
+  </div>
+
+  <div class="sec">
+    <h3>알게 된 점을 써 보세요</h3>
+    <label class="lbl" for="note" style="margin-top:6px">내 말로 정리해 봐요.</label>
+    <textarea id="note" rows="4" maxlength="400" placeholder="예: 태양 고도가 높을수록 빛이 닿는 넓이가 ( ), 1칸이 받는 에너지가 ( )."></textarea>
+    <label class="lbl" for="summaryPreview">공책에 옮길 요약</label>
+    <textarea id="summaryPreview" rows="8" readonly></textarea>
+    <div class="actions">
+      <button type="button" class="btn primary" id="copyBtn">요약 복사하기</button>
+      <button type="button" class="btn" data-goto="2">실험 더 하기</button>
+      <button type="button" class="btn" id="resetBtn">처음부터 다시 하기</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <details>
+      <summary>선생님을 위한 모형 설명</summary>
+      <div class="body">
+        <ul class="model">
+          <li>빛줄기의 단면을 2칸 × 2칸(4칸)으로 두었어요. 고도가 h일 때 빛이 닿는 넓이는 4칸 ÷ sin(h)예요.</li>
+          <li>같은 양의 빛이 퍼지므로 1칸이 받는 에너지는 sin(h) × 100%예요. 고도 90°일 때가 100%예요.</li>
+          <li>종이 온도는 20°C + 15°C × sin(h)로 계산한 모형값이에요. 주변 공기 20°C, 검은 종이를 10분 가열한다고 가정했어요.</li>
+          <li>날짜와 시각 모드는 위도 37°, 태양 적위의 근사식, 태양시를 사용해요. 구름과 대기의 흡수는 반영하지 않았고, 계절에 따른 기온 차이도 넣지 않았어요.</li>
+        </ul>
+      </div>
+    </details>
+  </div>
+</section>
+
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const $$=s=>Array.from(document.querySelectorAll(s));
+const rad=d=>d*Math.PI/180;
+const LAT=37, AIR=20, DT=15;
+const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const state={
+  step:1, pred:null, reason:'', note:'',
+  mode:'direct', alt:45, day:172, min:720,
+  records:[], chartY:'temp', checkAns:[null,null,null]
+};
+
+/* ---------- helpers ---------- */
+function dayToMD(n){
+  const md=[31,28,31,30,31,30,31,31,30,31,30,31];
+  let m=0;
+  while(m<11&&n>md[m]){n-=md[m];m++;}
+  return {m:m+1,d:n};
+}
+function fmtDate(n){const x=dayToMD(n);return x.m+'월 '+x.d+'일';}
+function fmtTime(min){const h=Math.floor(min/60),m=min%60;return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;}
+function fmtCells(n){return n>=10?String(Math.round(n)):String(Math.round(n*10)/10);}
+function sunAlt(n,min){
+  const decl=23.44*Math.sin(rad(360/365*(n-81)));
+  const H=(min/60-12)*15;
+  const s=Math.sin(rad(LAT))*Math.sin(rad(decl))+Math.cos(rad(LAT))*Math.cos(rad(decl))*Math.cos(rad(H));
+  return Math.asin(Math.max(-1,Math.min(1,s)))*180/Math.PI;
+}
+function current(){
+  let h,side;
+  if(state.mode==='direct'){h=state.alt;side=-1;}
+  else{h=Math.round(sunAlt(state.day,state.min));side=state.min<=720?-1:1;}
+  const up=h>=1;
+  const s=up?Math.sin(rad(h)):0;
+  return {h:h,side:side,up:up,e:s,cells:up?4/s:null,temp:AIR+DT*s};
+}
+function heatColor(e){
+  const t=Math.max(0,Math.min(1,(e-0.1)/0.9));
+  const a=[255,224,138],b=[255,92,16];
+  return 'rgb('+Math.round(a[0]+(b[0]-a[0])*t)+','+Math.round(a[1]+(b[1]-a[1])*t)+','+Math.round(a[2]+(b[2]-a[2])*t)+')';
+}
+/* 태양에서 C로 향하는 빛줄기 기하 */
+function geom(h,side,o){
+  const hr=rad(h),sn=Math.sin(hr),cs=Math.cos(hr);
+  return {S:{x:o.Cx+side*o.R*cs,y:o.G-o.R*sn},d:{x:-side*cs,y:sn},p:{x:-sn,y:-side*cs},sn:sn,cs:cs};
+}
+function edgePoint(g,off,sd,G){
+  const P={x:g.S.x+g.d.x*sd+g.p.x*off,y:g.S.y+g.d.y*sd+g.p.y*off};
+  const t=(G-P.y)/g.d.y;
+  return {P:P,E:{x:P.x+g.d.x*t,y:G}};
+}
+let toastT;
+function toast(m){
+  const t=$('#toast');t.textContent=m;t.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+/* ---------- 단계 이동 ---------- */
+function go(n){
+  state.step=n;
+  $$('[data-p]').forEach(p=>{p.hidden=(+p.dataset.p!==n);});
+  $$('.steps button').forEach(b=>{
+    if(+b.dataset.step===n)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');
+  });
+  if(n===3)renderRecords();
+  if(n===4)renderSummary();
+  window.scrollTo({top:0,behavior:reduce?'auto':'smooth'});
+}
+$$('.steps button').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.step)));
+$$('[data-goto]').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.goto)));
+
+/* ---------- 1단계 ---------- */
+$$('input[name="pred"]').forEach(r=>r.addEventListener('change',()=>{
+  state.pred=r.value;
+  $$('#predChoices .choice').forEach(l=>l.classList.toggle('on',l.querySelector('input').checked));
+}));
+$('#reason').addEventListener('input',e=>{state.reason=e.target.value;});
+$('#note').addEventListener('input',e=>{state.note=e.target.value;renderSummaryText();});
+
+/* ---------- 실험 장면 ---------- */
+const stage=$('#stageSvg');
+const C={x:380,y:364},R=290,W=64;
+(function buildStage(){
+  let ticks='',rays='',rl='',hl='';
+  for(let k=0;k<=20;k++){ticks+='<line x1="'+(60+32*k)+'" y1="'+C.y+'" x2="'+(60+32*k)+'" y2="'+(C.y+10)+'"/>';}
+  for(let i=0;i<12;i++){
+    const a=rad(i*30);
+    rays+='<line x1="'+(Math.cos(a)*32).toFixed(1)+'" y1="'+(Math.sin(a)*32).toFixed(1)+'" x2="'+(Math.cos(a)*43).toFixed(1)+'" y2="'+(Math.sin(a)*43).toFixed(1)+'"/>';
+  }
+  for(let k=0;k<7;k++){rl+='<line class="ray"/>';hl+='<circle class="hit" r="3.5"/>';}
+  stage.innerHTML=
+    '<defs><clipPath id="paperClip"><rect x="60" y="340" width="640" height="40"/></clipPath></defs>'+
+    '<rect id="sky" x="0" y="0" width="760" height="440" fill="var(--sky)"/>'+
+    '<path d="M '+(C.x-R)+' '+C.y+' A '+R+' '+R+' 0 0 1 '+(C.x+R)+' '+C.y+'" fill="none" stroke="var(--dash)" stroke-width="2.5" stroke-dasharray="2 9" stroke-linecap="round"/>'+
+    '<rect x="0" y="'+C.y+'" width="760" height="'+(440-C.y)+'" fill="var(--ground)"/>'+
+    '<g id="beamG"><polygon id="beam" fill="#FFC83C" fill-opacity=".3"/>'+rl+'</g>'+
+    '<rect x="60" y="'+C.y+'" width="640" height="10" rx="3" fill="var(--paper)"/>'+
+    '<rect id="foot" x="0" y="'+C.y+'" width="0" height="10" clip-path="url(#paperClip)" fill="#FF9A3C"/>'+
+    '<g stroke="#fff" stroke-opacity=".5" stroke-width="1">'+ticks+'</g>'+
+    '<g id="hitG" clip-path="url(#paperClip)">'+hl+'</g>'+
+    '<g fill="var(--muted)" font-size="14" font-family="\'Noto Sans KR\',sans-serif">'+
+      '<text x="60" y="404">검은 종이 (눈금 한 칸 = 넓이 1칸)</text></g>'+
+    '<g stroke="var(--ink)" stroke-width="2" fill="none"><path d="M380 384 v6 h32 v-6"/></g>'+
+    '<text x="396" y="408" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)" font-family="\'Noto Sans KR\',sans-serif">1칸</text>'+
+    '<g id="angG"><line id="gLine" stroke="var(--ink)" stroke-opacity=".55" stroke-width="2" stroke-dasharray="6 5"/>'+
+      '<line id="sLine" stroke="var(--ink)" stroke-opacity=".55" stroke-width="2" stroke-dasharray="6 5"/>'+
+      '<path id="arc" fill="none" stroke="var(--heat)" stroke-width="4.5" stroke-linecap="round"/>'+
+      '<text id="angText" font-family="Jua,\'Noto Sans KR\',sans-serif" font-size="22" fill="var(--heat)" stroke="var(--sky)" stroke-width="5" paint-order="stroke" stroke-linejoin="round"></text></g>'+
+    '<g id="sunG" class="can" tabindex="0" role="slider" aria-label="태양 고도" aria-valuemin="10" aria-valuemax="90" aria-valuenow="45">'+
+      '<g stroke="var(--sun-deep)" stroke-width="4" stroke-linecap="round">'+rays+'</g>'+
+      '<circle r="26" fill="var(--sun)" stroke="var(--sun-deep)" stroke-width="3"/><circle r="48" fill="transparent"/></g>'+
+    '<text id="noSun" x="380" y="190" text-anchor="middle" font-family="Jua,\'Noto Sans KR\',sans-serif" font-size="26" fill="var(--ink)" style="display:none">지금은 해가 지평선 아래에 있어요</text>'+
+    '<text id="noSun2" x="380" y="224" text-anchor="middle" font-size="16" fill="var(--muted)" font-family="\'Noto Sans KR\',sans-serif" style="display:none">해가 뜨기 전이거나 진 뒤예요. 시각을 바꿔 보세요.</text>';
+})();
+const rayEls=$$('#stageSvg .ray'),hitEls=$$('#stageSvg .hit');
+
+/* 온도계 눈금 */
+(function(){
+  let s='';
+  [20,25,30,35,40].forEach(t=>{
+    const y=180-(t-15)/25*160;
+    s+='<line x1="60" y1="'+y+'" x2="67" y2="'+y+'"/><text x="70" y="'+(y+4)+'" font-size="11" fill="var(--muted)" stroke="none" font-family="\'Noto Sans KR\',sans-serif">'+t+'</text>';
+  });
+  $('#thermTicks').innerHTML=s;
+  let g='';
+  for(let i=1;i<10;i++)g+='<line x1="'+(i*22)+'" y1="0" x2="'+(i*22)+'" y2="132"/>';
+  for(let j=1;j<6;j++)g+='<line x1="0" y1="'+(j*22)+'" x2="220" y2="'+(j*22)+'"/>';
+  $('#topGrid').innerHTML=g;
+})();
+
+function updateScene(c){
+  const on=c.up;
+  $('#sky').setAttribute('fill',on?'var(--sky)':'var(--sky-night)');
+  ['beamG','sunG','angG','foot','hitG'].forEach(id=>{$('#'+id).style.display=on?'':'none';});
+  $('#noSun').style.display=on?'none':'';
+  $('#noSun2').style.display=on?'none':'';
+  if(!on)return;
+  const g=geom(c.h,c.side,{Cx:C.x,G:C.y,R:R});
+  const sd=34;
+  $('#sunG').setAttribute('transform','translate('+g.S.x.toFixed(1)+' '+g.S.y.toFixed(1)+')');
+  const a=edgePoint(g,W/2,sd,C.y),b=edgePoint(g,-W/2,sd,C.y);
+  $('#beam').setAttribute('points',[a.P,a.E,b.E,b.P].map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' '));
+  for(let k=0;k<7;k++){
+    const q=edgePoint(g,-W/2+W*k/6,sd,C.y);
+    rayEls[k].setAttribute('x1',q.P.x.toFixed(1));rayEls[k].setAttribute('y1',q.P.y.toFixed(1));
+    rayEls[k].setAttribute('x2',q.E.x.toFixed(1));rayEls[k].setAttribute('y2',C.y);
+    hitEls[k].setAttribute('cx',q.E.x.toFixed(1));hitEls[k].setAttribute('cy',C.y);
+  }
+  const fw=W/g.sn;
+  const foot=$('#foot');
+  foot.setAttribute('x',(C.x-fw/2).toFixed(1));foot.setAttribute('width',fw.toFixed(1));
+  foot.setAttribute('fill',heatColor(c.e));
+  const sx=c.side,r1=70,r2=120;
+  $('#gLine').setAttribute('x1',C.x);$('#gLine').setAttribute('y1',C.y);
+  $('#gLine').setAttribute('x2',C.x+sx*r2);$('#gLine').setAttribute('y2',C.y);
+  $('#sLine').setAttribute('x1',C.x);$('#sLine').setAttribute('y1',C.y);
+  $('#sLine').setAttribute('x2',(C.x+sx*r2*g.cs).toFixed(1));$('#sLine').setAttribute('y2',(C.y-r2*g.sn).toFixed(1));
+  $('#arc').setAttribute('d','M '+(C.x+sx*r1)+' '+C.y+' A '+r1+' '+r1+' 0 0 '+(sx<0?1:0)+' '+(C.x+sx*r1*g.cs).toFixed(1)+' '+(C.y-r1*g.sn).toFixed(1));
+  const bh=rad(c.h/2);
+  const t=$('#angText');
+  t.setAttribute('x',(C.x+sx*106*Math.cos(bh)).toFixed(1));
+  t.setAttribute('y',(C.y-106*Math.sin(bh)+6).toFixed(1));
+  t.setAttribute('text-anchor',sx<0?'end':'start');
+  t.textContent='고도 '+Math.round(c.h)+'°';
+}
+
+/* 온도계 애니메이션 */
+let shownT=AIR,targetT=AIR,raf=null;
+function drawTherm(){
+  const T=Math.max(15,Math.min(40,shownT));
+  const y=180-(T-15)/25*160;
+  const m=$('#mercury');
+  m.setAttribute('y',y.toFixed(1));m.setAttribute('height',(190-y).toFixed(1));
+  $('#rTemp').textContent=shownT.toFixed(1)+'°C';
+}
+function tick(){
+  const d=targetT-shownT;
+  if(Math.abs(d)<0.02){shownT=targetT;raf=null;drawTherm();return;}
+  shownT+=d*0.14;drawTherm();raf=requestAnimationFrame(tick);
+}
+function setTarget(t){
+  targetT=t;
+  if(reduce){shownT=t;drawTherm();return;}
+  if(!raf)raf=requestAnimationFrame(tick);
+}
+
+function updateReadout(c){
+  $('#rAlt').textContent=c.up?Math.round(c.h)+'°':'해 없음';
+  $('#rCells').textContent=c.up?fmtCells(c.cells)+'칸':'0칸';
+  $('#rEnergy').textContent=Math.round(c.e*100)+'%';
+  $('#rBar').style.width=(c.e*100)+'%';
+  setTarget(c.temp);
+  const lit=$('#lit');
+  if(c.up){
+    const w=Math.min(44/Math.sin(rad(c.h)),220);
+    lit.setAttribute('x',((220-w)/2).toFixed(1));lit.setAttribute('width',w.toFixed(1));
+    lit.setAttribute('fill',heatColor(c.e));lit.style.display='';
+  }else lit.style.display='none';
+}
+
+function updateControls(c){
+  $('#altOut').textContent=state.alt+'°';
+  $('#altRange').value=state.alt;
+  $('#altRange').setAttribute('aria-valuetext','태양 고도 '+state.alt+'도');
+  $$('#ctlDirect .chip').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.alt===state.alt)));
+  $('#dateOut').textContent=fmtDate(state.day);
+  $('#dateRange').value=state.day;
+  $('#timeOut').textContent=fmtTime(state.min);
+  $('#timeRange').value=state.min;
+  $$('#ctlDate .chip').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.day===state.day)));
+  const sg=$('#sunG');
+  const direct=state.mode==='direct';
+  sg.classList.toggle('can',direct);
+  sg.setAttribute('tabindex',direct?'0':'-1');
+  sg.setAttribute('aria-valuenow',String(state.alt));
+  let cap;
+  if(direct){
+    cap='옆에서 본 모습이에요. 빛줄기 7줄은 언제나 같은 양의 햇빛이고, 흰 점은 빛줄기가 종이에 닿는 자리예요.';
+  }else{
+    const when=state.min<720?'오전이라 태양이 동쪽에 있어요.':(state.min===720?'정오라서 태양이 남쪽 하늘에 가장 높이 있어요.':'오후라 태양이 서쪽으로 기울어 가요.');
+    cap=fmtDate(state.day)+' '+fmtTime(state.min)+', '+when+(c.up?' 태양 고도는 '+Math.round(c.h)+'°예요.':'');
+  }
+  $('#stageCap').textContent=cap;
+}
+
+function render(){
+  const c=current();
+  updateControls(c);
+  updateScene(c);
+  updateReadout(c);
+}
+
+/* 모드 전환 */
+function setMode(m){
+  state.mode=m;
+  $('#modeDirect').setAttribute('aria-pressed',String(m==='direct'));
+  $('#modeDate').setAttribute('aria-pressed',String(m==='date'));
+  $('#ctlDirect').hidden=(m!=='direct');
+  $('#ctlDate').hidden=(m!=='date');
+  $('#mission').innerHTML=(m==='direct')
+    ?'<b>미션</b>태양 고도를 15°, 30°, 45°, 60°, 75°, 90°로 바꾸며 그때마다 기록해 보세요. 무엇이 달라지는지 찾아봐요.'
+    :'<b>미션</b>여름(6월 21일)과 겨울(12월 22일)의 낮 12시를 기록해 비교해 보세요. 같은 날 아침과 낮의 차이도 찾아봐요.';
+  render();
+}
+$('#modeDirect').addEventListener('click',()=>setMode('direct'));
+$('#modeDate').addEventListener('click',()=>setMode('date'));
+
+$('#altRange').addEventListener('input',e=>{state.alt=+e.target.value;render();});
+$$('#ctlDirect .chip').forEach(b=>b.addEventListener('click',()=>{state.alt=+b.dataset.alt;render();}));
+$('#dateRange').addEventListener('input',e=>{state.day=+e.target.value;render();});
+$$('#ctlDate .chip').forEach(b=>b.addEventListener('click',()=>{state.day=+b.dataset.day;render();}));
+$('#timeRange').addEventListener('input',e=>{state.min=+e.target.value;render();});
+$('#noonBtn').addEventListener('click',()=>{state.min=720;render();});
+
+/* 태양 끌기 */
+const sunG=$('#sunG');
+let dragging=false;
+function toSvg(e){
+  const pt=stage.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
+  return pt.matrixTransform(stage.getScreenCTM().inverse());
+}
+sunG.addEventListener('pointerdown',e=>{
+  if(state.mode!=='direct')return;
+  dragging=true;
+  try{sunG.setPointerCapture(e.pointerId);}catch(x){}
+  sunG.classList.add('grab');e.preventDefault();
+});
+sunG.addEventListener('pointermove',e=>{
+  if(!dragging)return;
+  const p=toSvg(e);
+  const dx=Math.max(0.001,C.x-p.x),dy=Math.max(0,C.y-p.y);
+  const h=Math.atan2(dy,dx)*180/Math.PI;
+  state.alt=Math.max(10,Math.min(90,Math.round(h)));
+  render();
+});
+function endDrag(){dragging=false;sunG.classList.remove('grab');}
+sunG.addEventListener('pointerup',endDrag);
+sunG.addEventListener('pointercancel',endDrag);
+sunG.addEventListener('lostpointercapture',endDrag);
+sunG.addEventListener('keydown',e=>{
+  if(state.mode!=='direct')return;
+  const step=e.shiftKey?5:1;
+  let d=0;
+  if(e.key==='ArrowUp'||e.key==='ArrowRight')d=step;
+  else if(e.key==='ArrowDown'||e.key==='ArrowLeft')d=-step;
+  else return;
+  e.preventDefault();
+  state.alt=Math.max(10,Math.min(90,state.alt+d));render();
+});
+
+/* ---------- 기록 ---------- */
+function updateRecCount(){$('#recCount').textContent='기록 '+state.records.length+'개';}
+function addRecord(){
+  const c=current();
+  if(!c.up){toast('해가 아직 뜨지 않았어요. 시각을 바꿔 보세요.');return;}
+  if(state.records.length>=15){toast('기록은 15개까지 할 수 있어요. 3단계에서 지우고 다시 기록해 보세요.');return;}
+  const label=state.mode==='direct'?'고도 직접 바꾸기':fmtDate(state.day)+' '+fmtTime(state.min);
+  const dup=state.records.some(r=>r.label===label&&r.h===Math.round(c.h));
+  if(dup){toast('이미 같은 조건을 기록했어요.');return;}
+  state.records.push({label:label,h:Math.round(c.h),cells:c.cells,e:c.e,temp:c.temp});
+  updateRecCount();
+  toast(state.records.length+'번째 기록을 저장했어요.');
+}
+$('#recordBtn').addEventListener('click',addRecord);
+
+function renderRecords(){
+  const has=state.records.length>0;
+  $('#recEmpty').hidden=has;$('#recWrap').hidden=!has;
+  const body=$('#recBody');body.innerHTML='';
+  state.records.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    const cells=[r.label,r.h+'°',fmtCells(r.cells)+'칸',Math.round(r.e*100)+'%',r.temp.toFixed(1)+'°C'];
+    cells.forEach((v,j)=>{const td=document.createElement('td');td.textContent=v;if(j>0)td.className='num';tr.appendChild(td);});
+    const td=document.createElement('td');
+    const b=document.createElement('button');b.type='button';b.className='del';b.textContent='지우기';
+    b.setAttribute('aria-label',(i+1)+'번째 기록 지우기');
+    b.addEventListener('click',()=>{state.records.splice(i,1);updateRecCount();renderRecords();});
+    td.appendChild(b);tr.appendChild(td);body.appendChild(tr);
+  });
+  if(has)drawChart();
+}
+$('#clearRec').addEventListener('click',()=>{state.records=[];updateRecCount();renderRecords();});
+$$('[data-cy]').forEach(b=>b.addEventListener('click',()=>{
+  state.chartY=b.dataset.cy;
+  $$('[data-cy]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  drawChart();
+}));
+
+function drawChart(){
+  const svg=$('#chartSvg');
+  const Wd=560,H=320,ml=58,mr=22,mt=30,mb=50;
+  const pw=Wd-ml-mr,ph=H-mt-mb;
+  const isT=state.chartY==='temp';
+  const y0=isT?18:0,y1=isT?36:100;
+  const yt=isT?[20,25,30,35]:[0,25,50,75,100];
+  const X=h=>ml+h/90*pw,Y=v=>mt+ph-(v-y0)/(y1-y0)*ph;
+  let s='';
+  yt.forEach(t=>{
+    s+='<line x1="'+ml+'" x2="'+(Wd-mr)+'" y1="'+Y(t)+'" y2="'+Y(t)+'" stroke="var(--line)" stroke-width="1.5"/>'+
+       '<text class="ct" x="'+(ml-10)+'" y="'+(Y(t)+5)+'" text-anchor="end">'+t+'</text>';
+  });
+  [0,15,30,45,60,75,90].forEach(h=>{
+    s+='<line x1="'+X(h)+'" x2="'+X(h)+'" y1="'+mt+'" y2="'+(mt+ph)+'" stroke="var(--line)" stroke-width="1.5"/>'+
+       '<text class="ct" x="'+X(h)+'" y="'+(mt+ph+22)+'" text-anchor="middle">'+h+'°</text>';
+  });
+  s+='<line x1="'+ml+'" x2="'+(Wd-mr)+'" y1="'+(mt+ph)+'" y2="'+(mt+ph)+'" stroke="var(--ink)" stroke-width="2"/>'+
+     '<line x1="'+ml+'" x2="'+ml+'" y1="'+mt+'" y2="'+(mt+ph)+'" stroke="var(--ink)" stroke-width="2"/>';
+  s+='<text class="cl" x="'+(ml+pw/2)+'" y="'+(H-8)+'" text-anchor="middle">태양 고도</text>';
+  s+='<text class="cl" x="'+ml+'" y="16" text-anchor="start">'+(isT?'검은 종이 온도(°C)':'1칸에 오는 에너지(%)')+'</text>';
+  const pts=state.records.slice().sort((a,b)=>a.h-b.h).map(r=>({x:X(r.h),y:Y(isT?r.temp:r.e*100),v:isT?r.temp.toFixed(1):Math.round(r.e*100)}));
+  if(pts.length>1){
+    s+='<path d="M'+pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' L')+'" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="6 5"/>';
+  }
+  pts.forEach(p=>{
+    s+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="7" fill="var(--heat)" stroke="var(--surface)" stroke-width="3"/>';
+    if(pts.length<=9)s+='<text class="cv" x="'+p.x.toFixed(1)+'" y="'+(p.y-13).toFixed(1)+'" text-anchor="middle">'+p.v+'</text>';
+  });
+  svg.innerHTML=s;
+}
+
+/* 확인 문제 */
+const CHECKS=[
+  {q:'태양 고도가 높아질수록 검은 종이의 온도는 어떻게 되나요?',opts:['높아져요','낮아져요','달라지지 않아요'],ans:0,
+   good:'맞아요. 고도가 높을수록 종이가 더 뜨거워졌어요.',bad:'그래프에서 고도가 높은 점과 낮은 점의 온도를 다시 비교해 보세요.'},
+  {q:'태양 고도가 높아질수록 빛이 닿는 넓이는 어떻게 되나요?',opts:['넓어져요','좁아져요','달라지지 않아요'],ans:1,
+   good:'맞아요. 고도가 높을수록 빛이 모여서 닿는 칸 수가 줄어들어요.',bad:'표에서 “빛이 닿은 넓이”가 고도에 따라 어떻게 바뀌는지 살펴보세요.'},
+  {q:'태양 고도가 높아질수록 같은 넓이(1칸)에 오는 에너지는 어떻게 되나요?',opts:['많아져요','적어져요','달라지지 않아요'],ans:0,
+   good:'맞아요. 같은 양의 빛이 더 좁은 곳에 모이니까 1칸이 받는 에너지가 많아져요.',bad:'표에서 “1칸 에너지”를 고도 순서대로 비교해 보세요.'}
+];
+function renderChecks(focusI,focusJ){
+  const box=$('#checks');box.innerHTML='';
+  CHECKS.forEach((c,i)=>{
+    const wrap=document.createElement('div');wrap.className='check';
+    const q=document.createElement('p');q.className='q';q.textContent=(i+1)+'. '+c.q;
+    const row=document.createElement('div');row.className='opts';
+    c.opts.forEach((o,j)=>{
+      const b=document.createElement('button');b.type='button';b.className='opt';b.textContent=o;
+      const sel=state.checkAns[i]===j;
+      b.setAttribute('aria-pressed',String(sel));
+      if(sel)b.classList.add(j===c.ans?'right':'wrong');
+      b.addEventListener('click',()=>{state.checkAns[i]=j;renderChecks(i,j);});
+      row.appendChild(b);
+    });
+    const fb=document.createElement('p');fb.className='fb';
+    if(state.checkAns[i]!==null){
+      const ok=state.checkAns[i]===c.ans;
+      fb.textContent=ok?c.good:c.bad;fb.classList.add(ok?'good':'bad');
+    }
+    wrap.appendChild(q);wrap.appendChild(row);wrap.appendChild(fb);box.appendChild(wrap);
+  });
+  if(focusI!==undefined){
+    const el=box.querySelectorAll('.check')[focusI].querySelectorAll('.opt')[focusJ];
+    if(el)el.focus();
+  }
+}
+
+/* ---------- 4단계 ---------- */
+function miniScene(h,idx){
+  const Cx=160,G=150,Rm=118,w=40;
+  const g=geom(h,-1,{Cx:Cx,G:G,R:Rm});
+  const a=edgePoint(g,w/2,22,G),b=edgePoint(g,-w/2,22,G);
+  const fw=w/g.sn,e=g.sn;
+  let ticks='';
+  for(let k=0;k<=14;k++)ticks+='<line x1="'+(20+20*k)+'" y1="'+G+'" x2="'+(20+20*k)+'" y2="'+(G+9)+'"/>';
+  const cells=fmtCells(4/g.sn);
+  let rays='';
+  for(let i=0;i<8;i++){const an=rad(i*45);rays+='<line x1="'+(Math.cos(an)*17).toFixed(1)+'" y1="'+(Math.sin(an)*17).toFixed(1)+'" x2="'+(Math.cos(an)*24).toFixed(1)+'" y2="'+(Math.sin(an)*24).toFixed(1)+'"/>';}
+  return '<svg viewBox="0 0 320 200" role="img" aria-label="태양 고도 '+h+'도일 때 빛이 닿는 칸 수 그림">'+
+    '<defs><clipPath id="mc'+idx+'"><rect x="20" y="'+(G-4)+'" width="280" height="20"/></clipPath></defs>'+
+    '<rect width="320" height="200" fill="var(--sky)"/><rect y="'+G+'" width="320" height="50" fill="var(--ground)"/>'+
+    '<polygon points="'+[a.P,a.E,b.E,b.P].map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')+'" fill="#FFC83C" fill-opacity=".35"/>'+
+    '<rect x="20" y="'+G+'" width="280" height="9" rx="2" fill="var(--paper)"/>'+
+    '<rect x="'+(Cx-fw/2).toFixed(1)+'" y="'+G+'" width="'+fw.toFixed(1)+'" height="9" fill="'+heatColor(e)+'" clip-path="url(#mc'+idx+')"/>'+
+    '<g stroke="#fff" stroke-opacity=".5">'+ticks+'</g>'+
+    '<g transform="translate('+g.S.x.toFixed(1)+' '+g.S.y.toFixed(1)+')"><g stroke="var(--sun-deep)" stroke-width="3" stroke-linecap="round">'+rays+'</g><circle r="13" fill="var(--sun)" stroke="var(--sun-deep)" stroke-width="2.5"/></g>'+
+    '<text x="160" y="184" text-anchor="middle" font-family="Jua,\'Noto Sans KR\',sans-serif" font-size="19" fill="var(--ink)">빛이 닿은 넓이 '+cells+'칸</text>'+
+    '</svg>';
+}
+(function(){
+  $('#figs').innerHTML=
+    '<figure class="figure">'+miniScene(90,1)+'<figcaption>고도 90°: 적은 칸에 빛이 모여서 칸마다 에너지가 많아요.</figcaption></figure>'+
+    '<figure class="figure">'+miniScene(30,2)+'<figcaption>고도 30°: 많은 칸에 빛이 퍼져서 칸마다 에너지가 적어요.</figcaption></figure>';
+})();
+
+const PRED={more:'더 많아질 것 같아요',less:'더 적어질 것 같아요',same:'달라지지 않을 것 같아요'};
+function renderCompare(){
+  const el=$('#compare');el.innerHTML='';
+  const add=(t,strong)=>{const p=document.createElement('p');if(strong){const b=document.createElement('strong');b.textContent=strong;p.appendChild(document.createTextNode(t));p.appendChild(b);}else p.textContent=t;el.appendChild(p);};
+  if(!state.pred){
+    add('1단계에서 예상을 고르면 여기서 실험 결과와 비교할 수 있어요.');
+  }else{
+    add('내 예상: ',PRED[state.pred]);
+    add('실험 결과: 태양 고도가 높을수록 같은 넓이(1칸)에 오는 태양 에너지가 많아졌어요.');
+    add(state.pred==='more'?'예상과 결과가 같아요! 왜 그런지 아래에서 확인해 보세요.':'예상과 결과가 달랐어요. 그래도 괜찮아요. 예상과 다를 때 더 많이 배울 수 있어요.');
+  }
+  if(state.records.length>=2){
+    const s=state.records.slice().sort((a,b)=>a.h-b.h);
+    const lo=s[0],hi=s[s.length-1];
+    if(lo.h!==hi.h)add('내 기록: 고도 '+lo.h+'°에서 종이 온도 '+lo.temp.toFixed(1)+'°C, 고도 '+hi.h+'°에서 '+hi.temp.toFixed(1)+'°C였어요.');
+  }
+}
+function buildSummary(){
+  const L=['[태양 고도와 태양 에너지 양 알아보기]'];
+  L.push('내 예상: '+(state.pred?PRED[state.pred]:'고르지 않았어요')+(state.reason.trim()?' (까닭: '+state.reason.trim()+')':''));
+  L.push('');L.push('실험 기록');
+  if(!state.records.length)L.push('(기록 없음)');
+  state.records.forEach((r,i)=>L.push((i+1)+') '+r.label+' | 고도 '+r.h+'° | 넓이 '+fmtCells(r.cells)+'칸 | 1칸 에너지 '+Math.round(r.e*100)+'% | 종이 온도 '+r.temp.toFixed(1)+'°C'));
+  L.push('');
+  L.push('알게 된 점: '+(state.note.trim()||'(아직 쓰지 않았어요)'));
+  return L.join('\n');
+}
+function renderSummaryText(){$('#summaryPreview').value=buildSummary();}
+function renderSummary(){renderCompare();renderSummaryText();}
+
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);return true;}catch(e){}
+  try{const ta=$('#summaryPreview');ta.focus();ta.select();const ok=document.execCommand('copy');ta.setSelectionRange(0,0);return ok;}catch(e){return false;}
+}
+$('#copyBtn').addEventListener('click',async()=>{
+  renderSummaryText();
+  const ok=await copyText($('#summaryPreview').value);
+  toast(ok?'요약을 복사했어요.':'복사가 안 됐어요. 위 글을 직접 선택해서 복사해 주세요.');
+});
+
+/* 다시 하기 */
+let armed=false,armT;
+$('#resetBtn').addEventListener('click',()=>{
+  const b=$('#resetBtn');
+  if(!armed){
+    armed=true;b.textContent='정말 지울까요? 한 번 더 누르세요';
+    armT=setTimeout(()=>{armed=false;b.textContent='처음부터 다시 하기';},4000);return;
+  }
+  clearTimeout(armT);armed=false;b.textContent='처음부터 다시 하기';
+  state.pred=null;state.reason='';state.note='';state.records=[];state.checkAns=[null,null,null];
+  state.mode='direct';state.alt=45;state.day=172;state.min=720;state.chartY='temp';
+  $$('input[name="pred"]').forEach(r=>{r.checked=false;});
+  $$('#predChoices .choice').forEach(l=>l.classList.remove('on'));
+  $('#reason').value='';$('#note').value='';
+  $$('[data-cy]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.cy==='temp')));
+  updateRecCount();renderChecks();setMode('direct');go(1);
+});
+
+/* ---------- 시작 ---------- */
+renderChecks();
+setMode('direct');
+drawTherm();
+go(1);
+})();
+</script>
+</body>
+</html>
